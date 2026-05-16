@@ -17,7 +17,7 @@ function pickFallbackCover(id) {
 
 // ===== РАЗБИЕНИЕ ТЕКСТА НА СТРАНИЦЫ =====
 // По числу символов, с уважением к границам предложений
-function paginate(paragraphs, maxCharsPerPage = 580) {
+function paginate(paragraphs, maxCharsPerPage = 520) {
   const pages = [];
   let current = [];
   let currentLen = 0;
@@ -192,8 +192,7 @@ function openBook(book) {
     page.className = 'page';
     page.innerHTML =
       `<h2>· ${roman[i] || (i+1)} ·</h2>` +
-      paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('') +
-      `<div class="page-number">— ${i+2} —</div>`;
+      paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('');
     container.appendChild(page);
   });
 

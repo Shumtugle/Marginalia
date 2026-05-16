@@ -17,7 +17,7 @@ function pickFallbackCover(id) {
 
 // ===== РАЗБИЕНИЕ ТЕКСТА НА СТРАНИЦЫ =====
 // По числу символов, с уважением к границам предложений
-function paginate(paragraphs, maxCharsPerPage = 700) {
+function paginate(paragraphs, maxCharsPerPage = 580) {
   const pages = [];
   let current = [];
   let currentLen = 0;

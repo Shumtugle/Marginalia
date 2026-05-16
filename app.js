@@ -1,13 +1,12 @@
 // ===== ЗАПАСНЫЕ ЦВЕТА ОБЛОЖЕК =====
-// Если в файле не указаны цвета — берём из этой палитры по id книги
 const FALLBACK_COVERS = [
-  { from: '#5a4530', to: '#2a1d12', accent: '#d4b896' }, // тёплый коричневый
-  { from: '#3a4a5a', to: '#1a2530', accent: '#b8c8d4' }, // зимний синий
-  { from: '#4a5a3a', to: '#1f2818', accent: '#c8d4a8' }, // оливковый
-  { from: '#5a3a4a', to: '#2a1820', accent: '#d4b8c8' }, // приглушённый винный
-  { from: '#5a4a3a', to: '#2a2018', accent: '#d4c8a8' }, // охра
-  { from: '#3a5a4a', to: '#182a20', accent: '#a8d4c8' }, // морской
-  { from: '#4a3a5a', to: '#20182a', accent: '#c8b8d4' }, // фиолетовый
+  { from: '#5a4530', to: '#2a1d12', accent: '#d4b896' },
+  { from: '#3a4a5a', to: '#1a2530', accent: '#b8c8d4' },
+  { from: '#4a5a3a', to: '#1f2818', accent: '#c8d4a8' },
+  { from: '#5a3a4a', to: '#2a1820', accent: '#d4b8c8' },
+  { from: '#5a4a3a', to: '#2a2018', accent: '#d4c8a8' },
+  { from: '#3a5a4a', to: '#182a20', accent: '#a8d4c8' },
+  { from: '#4a3a5a', to: '#20182a', accent: '#c8b8d4' },
 ];
 
 function pickFallbackCover(id) {
@@ -16,20 +15,53 @@ function pickFallbackCover(id) {
   return FALLBACK_COVERS[hash % FALLBACK_COVERS.length];
 }
 
-// ===== ПАРСЕР =====
-// Поддерживает два формата:
-// 1) С заголовком и разделителями страниц:
-//    TITLE: ...
-//    META: ...
-//    AUDIO: ...
-//    ===
-//    первая страница
-//    ===
-//    вторая страница
-//
-// 2) Просто текст без всякого служебного синтаксиса —
-//    тогда заголовок берётся из имени файла,
-//    а страницы режутся автоматически по N абзацев.
+// ===== РАЗБИЕНИЕ ТЕКСТА НА СТРАНИЦЫ =====
+// По числу символов, с уважением к границам предложений
+function paginate(paragraphs, maxCharsPerPage = 700) {
+  const pages = [];
+  let current = [];
+  let currentLen = 0;
+
+  function flush() {
+    if (current.length) {
+      pages.push(current);
+      current = [];
+      currentLen = 0;
+    }
+  }
+
+  for (const para of paragraphs) {
+    if (para.length > maxCharsPerPage * 1.3) {
+      flush();
+      const sentences = para.split(/(?<=[.!?…])\s+/);
+      let buf = '';
+      for (const s of sentences) {
+        if (buf && (buf.length + 1 + s.length) > maxCharsPerPage) {
+          pages.push([buf.trim()]);
+          buf = s;
+        } else {
+          buf = buf ? buf + ' ' + s : s;
+        }
+      }
+      if (buf) {
+        current.push(buf.trim());
+        currentLen = buf.length;
+      }
+      continue;
+    }
+
+    if (current.length && currentLen + para.length > maxCharsPerPage) {
+      flush();
+    }
+    current.push(para);
+    currentLen += para.length;
+  }
+
+  flush();
+  return pages;
+}
+
+// ===== ПАРСЕР КНИГИ =====
 function parseBook(text, id) {
   const hasHeader = /^\s*TITLE\s*:/im.test(text.slice(0, 200));
 
@@ -44,30 +76,26 @@ function parseBook(text, id) {
       const m = line.match(/^([A-Z_]+)\s*:\s*(.*)$/);
       if (m) meta[m[1].toLowerCase()] = m[2].trim();
     });
-    // блоки страниц (если есть)
+
     if (blocks.length) {
-      pages = blocks
-        .map(b => b.trim())
-        .filter(Boolean)
-        .map(b => b.split(/\r?\n\s*\r?\n/).map(p => p.trim()).filter(Boolean));
+      blocks.forEach(b => {
+        const paragraphs = b.trim().split(/\r?\n\s*\r?\n/).map(p => p.trim()).filter(Boolean);
+        if (paragraphs.length) {
+          paginate(paragraphs).forEach(p => pages.push(p));
+        }
+      });
       body = null;
     } else {
-      // были метаданные, но нет ===, режем оставшееся автоматически
       body = '';
     }
   }
 
-  // Автоматическое разбиение: ~2 абзаца на страницу
   if (!pages.length && body !== null) {
     const paragraphs = body.split(/\r?\n\s*\r?\n/).map(p => p.trim()).filter(Boolean);
-    const PARS_PER_PAGE = 2;
-    for (let i = 0; i < paragraphs.length; i += PARS_PER_PAGE) {
-      pages.push(paragraphs.slice(i, i + PARS_PER_PAGE));
-    }
+    pages = paginate(paragraphs);
   }
 
   const fallback = pickFallbackCover(id);
-
   return {
     id,
     title: meta.title || id,
@@ -111,8 +139,9 @@ async function loadLibrary() {
     books.forEach(book => {
       const card = document.createElement('div');
       card.className = 'shelf-book';
-      card.style.background = `linear-gradient(135deg, ${book.cover.from} 0%, ${book.cover.to} 100%)`;
-      card.style.color = book.cover.accent;
+      card.style.setProperty('--cover-from', book.cover.from);
+      card.style.setProperty('--cover-to', book.cover.to);
+      card.style.setProperty('--cover-accent', book.cover.accent);
       card.innerHTML = `
         <h3>${escapeHtml(book.title)}</h3>
         <div class="ornament">· · ·</div>
@@ -140,18 +169,16 @@ function openBook(book) {
   document.getElementById('library-view').style.display = 'none';
   document.getElementById('reader-view').style.display = 'flex';
 
-  // Полностью пересоздаём контейнер — иначе StPageFlip спотыкается
-  // о свои же остатки от предыдущей книги
   const wrapper = document.getElementById('book-wrapper');
   wrapper.innerHTML = '<div id="book"></div>';
   const container = document.getElementById('book');
+  container.style.setProperty('--cover-from', book.cover.from);
+  container.style.setProperty('--cover-to', book.cover.to);
+  container.style.setProperty('--cover-accent', book.cover.accent);
 
-  // передняя обложка
   const cover = document.createElement('div');
   cover.className = 'page page-cover';
   cover.setAttribute('data-density', 'hard');
-  cover.style.background = `linear-gradient(135deg, ${book.cover.from} 0%, ${book.cover.to} 100%)`;
-  cover.style.color = book.cover.accent;
   cover.innerHTML = `
     <h1>${escapeHtml(book.title.toUpperCase())}</h1>
     <div class="ornament">· · ·</div>
@@ -159,8 +186,7 @@ function openBook(book) {
   `;
   container.appendChild(cover);
 
-  // страницы
-  const roman = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX'];
+  const roman = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI','XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII','XXXIX','XL'];
   book.pages.forEach((paragraphs, i) => {
     const page = document.createElement('div');
     page.className = 'page';
@@ -171,22 +197,17 @@ function openBook(book) {
     container.appendChild(page);
   });
 
-  // финальная страница
   const end = document.createElement('div');
   end.className = 'page end-page';
   end.textContent = '· конец ·';
   container.appendChild(end);
 
-  // задняя обложка
   const back = document.createElement('div');
   back.className = 'page page-cover';
   back.setAttribute('data-density', 'hard');
-  back.style.background = `linear-gradient(135deg, ${book.cover.from} 0%, ${book.cover.to} 100%)`;
-  back.style.color = book.cover.accent;
   back.innerHTML = `<div class="ornament">· · ·</div>`;
   container.appendChild(back);
 
-  // аудио
   const audioWrap = document.getElementById('audio-player');
   const audio = document.getElementById('audio');
   if (book.audio) {
@@ -198,7 +219,6 @@ function openBook(book) {
     audio.querySelector('source').src = '';
   }
 
-  // инициализация StPageFlip
   pageFlip = new St.PageFlip(container, {
     width: 380, height: 540,
     size: "stretch",
@@ -215,7 +235,6 @@ function openBook(book) {
   setTimeout(updateCounter, 100);
 }
 
-// ===== УПРАВЛЕНИЕ =====
 const counter = document.getElementById('page-counter');
 const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
@@ -232,17 +251,15 @@ function updateCounter() {
 prevBtn.addEventListener('click', () => pageFlip && pageFlip.flipPrev());
 nextBtn.addEventListener('click', () => pageFlip && pageFlip.flipNext());
 
-// ===== ВОЗВРАТ К ПОЛКЕ =====
 document.getElementById('back-button').addEventListener('click', () => {
   const audio = document.getElementById('audio');
   audio.pause();
   if (pageFlip) {
-    try { pageFlip.destroy(); } catch (e) { /* ничего */ }
+    try { pageFlip.destroy(); } catch (e) {}
     pageFlip = null;
   }
   document.getElementById('reader-view').style.display = 'none';
   document.getElementById('library-view').style.display = 'flex';
 });
 
-// ===== СТАРТ =====
 loadLibrary();

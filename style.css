@@ -53,6 +53,9 @@ body {
 }
 
 .shelf-book {
+  --cover-from: #5a4530;
+  --cover-to: #2a1d12;
+  --cover-accent: #d4b896;
   aspect-ratio: 2/3;
   border-radius: 3px 6px 6px 3px;
   cursor: pointer;
@@ -63,6 +66,8 @@ body {
   justify-content: center;
   text-align: center;
   padding: 18px 14px;
+  background: linear-gradient(135deg, var(--cover-from) 0%, var(--cover-to) 100%);
+  color: var(--cover-accent);
   box-shadow:
     inset 6px 0 12px rgba(0,0,0,0.3),
     inset -2px 0 4px rgba(255,255,255,0.05),
@@ -140,18 +145,25 @@ body {
   justify-content: center;
 }
 
-#book { margin: 0 auto; }
+#book {
+  margin: 0 auto;
+  --cover-from: #5a4530;
+  --cover-to: #2a1d12;
+  --cover-accent: #d4b896;
+}
 
 .page {
   background: #f4ecd8;
   color: #2a2520;
-  padding: 36px 30px 50px;
+  padding: 30px 26px 44px;
   overflow: hidden;
   position: relative;
   box-shadow: inset 0 0 40px rgba(0,0,0,0.06);
 }
 
 .page-cover {
+  background: linear-gradient(135deg, var(--cover-from) 0%, var(--cover-to) 100%) !important;
+  color: var(--cover-accent) !important;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -183,24 +195,24 @@ body {
 }
 
 .page h2 {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: normal;
   letter-spacing: 4px;
   color: #8a7858;
-  margin: 0 0 22px;
+  margin: 0 0 16px;
   text-align: center;
 }
 
 .page p {
-  font-size: 15px;
-  line-height: 1.75;
-  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 0 0 12px;
   text-align: justify;
   hyphens: auto;
 }
 
 .page p:first-of-type::first-letter {
-  font-size: 36px;
+  font-size: 32px;
   float: left;
   line-height: 1;
   margin: 4px 6px 0 0;
@@ -210,10 +222,10 @@ body {
 
 .page-number {
   position: absolute;
-  bottom: 20px;
+  bottom: 16px;
   left: 0; right: 0;
   text-align: center;
-  font-size: 11px;
+  font-size: 10px;
   color: #8a7858;
   letter-spacing: 3px;
 }

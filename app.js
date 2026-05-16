@@ -162,10 +162,28 @@ function escapeHtml(s) {
   }[c]));
 }
 
+// Проверяет, существует ли аудиофайл на сервере (без скачивания)
+async function findAudio(book) {
+  // Если в метаданных явно указано имя — используем его
+  if (book.audio) {
+    return 'audio/' + encodeURIComponent(book.audio);
+  }
+  // Иначе пытаемся угадать по имени книги: книга.txt → книга.mp3
+  const candidates = [book.id + '.mp3', book.id + '.m4a', book.id + '.ogg'];
+  for (const name of candidates) {
+    try {
+      const url = 'audio/' + encodeURIComponent(name);
+      const r = await fetch(url, { method: 'HEAD' });
+      if (r.ok) return url;
+    } catch (e) {}
+  }
+  return null;
+}
+
 // ===== ОТКРЫТИЕ КНИГИ =====
 let pageFlip = null;
 
-function openBook(book) {
+async function openBook(book) {
   document.getElementById('library-view').style.display = 'none';
   document.getElementById('reader-view').style.display = 'flex';
 
@@ -209,9 +227,10 @@ function openBook(book) {
 
   const audioWrap = document.getElementById('audio-player');
   const audio = document.getElementById('audio');
-  if (book.audio) {
+  const audioUrl = await findAudio(book);
+  if (audioUrl) {
     audioWrap.classList.remove('empty');
-    audio.querySelector('source').src = 'audio/' + encodeURIComponent(book.audio);
+    audio.querySelector('source').src = audioUrl;
     audio.load();
   } else {
     audioWrap.classList.add('empty');

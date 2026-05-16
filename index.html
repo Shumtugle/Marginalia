@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Marginalia</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+</head>
+<body>
+
+  <!-- ПОЛКА -->
+  <div id="library-view">
+    <div class="library-title">Marginalia</div>
+    <div class="library-subtitle">· заметки на полях ·</div>
+    <div class="shelf" id="shelf">
+      <div class="loading">загрузка…</div>
+    </div>
+  </div>
+
+  <!-- ЧИТАЛКА -->
+  <div id="reader-view">
+    <button id="back-button">‹ к полке</button>
+    <div id="book-wrapper">
+      <div id="book"></div>
+    </div>
+    <div id="controls">
+      <button id="prev">‹</button>
+      <span id="page-counter">1 / 1</span>
+      <button id="next">›</button>
+    </div>
+    <div id="audio-player">
+      <div class="audio-label">♪ аудиоверсия</div>
+      <audio id="audio" controls preload="none">
+        <source src="" type="audio/mpeg">
+      </audio>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
